@@ -1,103 +1,242 @@
-import Image from "next/image";
+'use client';
+import Link from "next/link";
 
-export default function Home() {
+import { useEffect, useRef, useState } from 'react';
+
+export default function VideoScrollPage() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [fps, setFps] = useState(30);
+  const [frame, setFrame] = useState(0);
+  const [lastTime, setLastTime] = useState(0);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const scroller = scrollRef.current;
+    if (!video || !scroller) return;
+
+    const onMeta = () => {
+      // crude fps estimate; override if known
+      if (video.duration && video.webkitDecodedFrameCount) {
+        setFps(
+          Math.round(video.webkitDecodedFrameCount / video.duration) || 30
+        );
+      }
+      video.pause();        // we control time manually
+      video.currentTime = 0;
+    };
+    video.addEventListener('loadedmetadata', onMeta, { once: true });
+
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+
+      requestAnimationFrame(() => {
+        const maxScroll =
+          scroller.offsetHeight - window.innerHeight;
+        const progress = Math.min(window.scrollY / maxScroll, 1);
+        const target = progress * video.duration;
+
+        // Only seek if we moved ≥ 1 frame
+        if (Math.abs(target - lastTime) > 1 / fps) {
+          video.currentTime = target;
+          setLastTime(target);
+          setFrame(Math.floor(target * fps));
+        }
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [fps, lastTime]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="relative flex">
+      {/* LEFT :: fixed vertical video */}
+      <video
+        ref={videoRef}
+        src="/videos/slow-mo-3.mp4"   // place in /public/videos/
+        muted
+        playsInline
+        preload="auto"
+        className="fixed left-0 top-0 h-screen w-auto object-cover will-change-transform -z-10"
+      />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      {/* RIGHT :: scrolling copy */}
+      <div
+        ref={scrollRef}
+        className="ml-[min(50vw,500px)] min-h-[400vh] w-full bg-black px-8 py-24 text-white"
+      >
+        {[
+  // 1 — viral origin
+  <>
+    The original&nbsp;
+    <Link href="https://www.als.org/ibc" target="_blank">
+      Ice&nbsp;Bucket&nbsp;Challenge
+    </Link>
+    &nbsp;erupted in summer 2014 when ALS advocate Pete Frates and friends
+    invited the internet to drench themselves in ice water, donate, and tag
+    others—turning the social graph itself into a fundraiser.
+  </>,
+
+  // 2 — record‑breaking funds
+  <>
+    In barely six weeks the movement generated 17&nbsp;million uploads and
+    delivered&nbsp;$115 million to the&nbsp;
+    <Link href="https://www.als.org/ibc" target="_blank">
+      ALS Association
+    </Link>
+    , a windfall that seeded dozens of labs and even helped scientists identify
+    the&nbsp;
+    <Link
+      href="https://time.com/4426072/ice-bucket-challenge-als-discovery/"
+      target="_blank"
+    >
+      NEK1 gene
+    </Link>
+    &nbsp;linked to ALS.
+  </>,
+
+  // 3 — classroom hook
+  <>
+    Teachers noticed students were already obsessed with the meme, so outlets
+    like&nbsp;
+    <Link
+      href="https://choices.scholastic.com/pages/content-hubs/decision-making/lesson-plan-are-you-following-the-herd.html"
+      target="_blank"
+    >
+      Scholastic Choices
+    </Link>
+    &nbsp;framed it in “herd‑mentality” lessons, letting English and health
+    classes analyze peer influence while biology classes covered neuro‑
+    degeneration.
+  </>,
+
+  // 4 — early safety notes
+  <>
+    A handful of risky copycats prompted schools to pair any challenge with
+    adult supervision and clear safety norms, a caution reflected in PBS local
+    coverage of&nbsp;
+    <Link
+      href="https://www.pbs.org/video/njtoday-mary-alice-williams-takes-icebucketchallenge/"
+      target="_blank"
+    >
+      student‑run buckets in 2014
+    </Link>
+    .
+  </>,
+
+  // 5 — spark for social‑good pedagogy
+  <>
+    Education writers on&nbsp;
+    <Link
+      href="https://www.edutopia.org/blog/empowering-student-changemakers-vicki-davis"
+      target="_blank"
+    >
+      Edutopia
+    </Link>
+    &nbsp;held it up as proof that teens could become “social entrepreneurs”
+    when armed with storytelling, empathy, and a clear call to action.
+  </>,
+
+  // 6 — pivot to mental‑health
+  <>
+    Mental‑health advocates soon wondered if the same formula could destigmatize
+    anxiety and depression; by 2024&nbsp;
+    <Link
+      href="https://www.als.org/stories-news/new-report-highlights-progress-made-because-als-ice-bucket-challenge"
+      target="_blank"
+    >
+      retrospectives
+    </Link>
+    &nbsp;on the campaign explicitly called it a blueprint for other causes.
+  </>,
+
+  // 7 — 2025 Speak Your MIND launch
+  <>
+    In March 2025 the University of South Carolina’s&nbsp;
+    <Link
+      href="https://support.activeminds.org/fundraiser/6221101"
+      target="_blank"
+    >
+      MIND&nbsp;Club
+    </Link>
+    &nbsp;revived the stunt as the “Speak Your MIND Ice Bucket Challenge,”
+    asking participants to share one mental‑health tip before the splash and to
+    donate&nbsp;$5 to&nbsp;
+    <Link href="https://www.activeminds.org/" target="_blank">
+      Active Minds
+    </Link>
+    .
+  </>,
+
+  // 8 — local‑news amplification
+  <>
+    Regional outlets such as&nbsp;
+    <Link
+      href="https://wset.com/news/local/a-bigger-deeper-meaning-new-ice-bucket-challenge-raises-awareness-for-mental-health-active-minds-non-profit-april-2025"
+      target="_blank"
+    >
+      WSET ABC‑13
+    </Link>
+    &nbsp;covered the relaunch, underscoring its “deeper meaning” for student
+    wellness.
+  </>,
+
+  // 9 — high‑school adoption
+  <>
+    High‑schoolers quickly joined: the student newspaper&nbsp;
+    <Link
+      href="https://sjcsabre.org/speak-your-mind-ice-bucket-challenge-raising-awareness-about-mental-health/"
+      target="_blank"
+    >
+      <em>The Sabre</em>
+    </Link>
+    &nbsp;documented sports teams nominating rivals between scrimmages to keep
+    mental‑health talk front‑and‑center.
+  </>,
+
+  //10 — spirit‑week integration
+  <>
+    Many campuses slotted the challenge into spring spirit weeks—guidance
+    counselors staffed resource booths while science teachers explained the
+    physiology of cold‑shock and stress.
+  </>,
+
+  //11 — viral metrics
+  <>
+    On TikTok the hashtag&nbsp;
+    <Link
+      href="https://www.tiktok.com/discover/how-to-play-the-usc-mind-ice-bucket-challenge"
+      target="_blank"
+    >
+      #SpeakYourMIND
+    </Link>
+    &nbsp;passed 200 million views in ten days, mirroring the exponential
+    trajectory of the 2014 original.
+  </>,
+
+  //12 — classroom impact wrap‑up
+  <>
+    Today advisers treat the reboot as both fundraiser and SEL lesson,
+    combining the adrenaline of a public commitment with journaling prompts,
+    peer‑support sign‑ups, and clear pathways to counseling—proof that a bucket
+    of ice water can open the door to serious mental‑health dialogue.
+  </>,
+].map((content, idx) => (
+  <p key={idx} className="mx-auto mb-16 max-w-2xl text-lg leading-relaxed">
+    {content}
+  </p>
+))}
+      </div>
+
+      {/* frame counter */}
+      <div className="fixed bottom-4 right-4 rounded bg-black/70 px-3 py-2 font-mono text-sm text-white">
+        Frame {frame}
+      </div>
+    </main>
   );
 }
