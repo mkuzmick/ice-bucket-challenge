@@ -58,7 +58,7 @@ export default function VideoScrollPage() {
       {/* LEFT :: fixed vertical video */}
       <video
         ref={videoRef}
-        src="/videos/slow-mo-4.mp4"   // place in /public/videos/
+        src="/videos/slow-mo-3.mp4"   // place in /public/videos/
         muted
         playsInline
         preload="auto"
