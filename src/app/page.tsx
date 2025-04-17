@@ -4,12 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from 'react';
 
 export default function VideoScrollPage() {
+  const [ready, setReady] = useState(false); // loading gate
   const videoRef = useRef<HTMLVideoElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [fps, setFps] = useState(30);
   const [frame, setFrame] = useState(0);
   const [lastTime, setLastTime] = useState(0);
+
+  // Lock/unlock scroll based on ready state
+  useEffect(() => {
+    document.body.style.overflow = ready ? '' : 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [ready]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -18,19 +25,22 @@ export default function VideoScrollPage() {
 
     const onMeta = () => {
       // crude fps estimate; override if known
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (video.duration && (video as any).webkitDecodedFrameCount) {
         setFps(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           Math.round((video as any).webkitDecodedFrameCount / video.duration) || 30
         );
       }
       video.pause();        // we control time manually
       video.currentTime = 0;
+      setReady(true); // first frame is in memory
     };
-    video.addEventListener('loadedmetadata', onMeta, { once: true });
+    video.addEventListener('loadeddata', onMeta, { once: true });
 
     let ticking = false;
     const onScroll = () => {
-      if (ticking) return;
+      if (!ready || ticking) return; // ignore scroll while loading
       ticking = true;
 
       requestAnimationFrame(() => {
@@ -51,18 +61,19 @@ export default function VideoScrollPage() {
 
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [fps, lastTime]);
+  }, [fps, lastTime, ready]);
 
   return (
     <main className="relative flex">
       {/* LEFT :: fixed vertical video */}
+      {/* video fades in when ready */}
       <video
         ref={videoRef}
         src="/videos/slow-mo-3.mp4"   // place in /public/videos/
         muted
         playsInline
         preload="auto"
-        className="fixed left-0 top-0 h-screen w-auto object-cover will-change-transform -z-10"
+        className={`fixed left-0 top-0 h-screen w-auto object-cover will-change-transform -z-10 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
       />
 
       {/* RIGHT :: scrolling copy */}
@@ -237,6 +248,31 @@ export default function VideoScrollPage() {
       <div className="fixed bottom-4 right-4 rounded bg-black/70 px-3 py-2 font-mono text-sm text-white">
         Frame {frame}
       </div>
+      {/* spinner overlay while loading */}
+      {!ready && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black">
+          <svg
+            className="h-12 w-12 animate-spin text-white"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              d="M4 12a8 8 0 018-8"
+              fill="currentColor"
+            />
+          </svg>
+        </div>
+      )}
     </main>
   );
 }
+
