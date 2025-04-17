@@ -18,9 +18,9 @@ export default function VideoScrollPage() {
 
     const onMeta = () => {
       // crude fps estimate; override if known
-      if (video.duration && video.webkitDecodedFrameCount) {
+      if (video.duration && (video as any).webkitDecodedFrameCount) {
         setFps(
-          Math.round(video.webkitDecodedFrameCount / video.duration) || 30
+          Math.round((video as any).webkitDecodedFrameCount / video.duration) || 30
         );
       }
       video.pause();        // we control time manually
@@ -58,7 +58,7 @@ export default function VideoScrollPage() {
       {/* LEFT :: fixed vertical video */}
       <video
         ref={videoRef}
-        src="/videos/slow-mo-3.mp4"   // place in /public/videos/
+        src="/videos/slow-mo-4.mp4"   // place in /public/videos/
         muted
         playsInline
         preload="auto"
